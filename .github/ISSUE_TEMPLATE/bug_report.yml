@@ -1,0 +1,38 @@
+name: Bug report
+description: Something renders wrong, plays wrong, or crashes
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect instead?
+    validations:
+      required: true
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal and size
+      placeholder: "iTerm2 3.5, 120x30"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: rex-run version
+      description: Output of `rex-run --version`
+      placeholder: "rex-run 0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "macOS 15.2 / Ubuntu 24.04 / Windows 11"
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshot or terminal output
+      description: A screenshot helps a lot for rendering bugs.

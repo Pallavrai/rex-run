@@ -1,0 +1,23 @@
+[package]
+name = "rex-run"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+authors = ["Pallav Rai <pallavrai8953@gmail.com>"]
+description = "Chrome's offline T-Rex game in your terminal, drawn with the browser's own sprites"
+repository = "https://github.com/Pallavrai/rex-run"
+homepage = "https://github.com/Pallavrai/rex-run"
+documentation = "https://github.com/Pallavrai/rex-run#readme"
+license = "MIT"
+readme = "README.md"
+keywords = ["game", "terminal", "tui", "dinosaur", "trex"]
+categories = ["games", "command-line-utilities"]
+exclude = ["assets/*.gif", "assets/*.cast", "tools/*"]
+
+[dependencies]
+crossterm = "0.29"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

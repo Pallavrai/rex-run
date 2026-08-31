@@ -1,0 +1,23 @@
+# Rust
+/target
+**/*.rs.bk
+
+# macOS
+.DS_Store
+
+# Recordings produced while making the demo GIF
+*.cast
+
+# Python bytecode from tools/
+__pycache__/
+
+# Agent / AI tooling — local only, never pushed
+.claude/
+CLAUDE.md
+AGENTS.md
+.mcp.json
+.cursor/
+.cursorrules
+.windsurfrules
+.aider*
+/tools

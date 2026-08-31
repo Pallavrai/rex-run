@@ -1,0 +1,17 @@
+name: Feature request
+description: Suggest something for the game
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why?
+      description: >
+        rex-run aims to match Chrome's offline game. If this exists in Chrome,
+        say where; if it does not, say why it is worth adding anyway.
