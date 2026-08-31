@@ -61,6 +61,33 @@ fn score_ticks_at_chrome_s_rate() {
 }
 
 #[test]
+fn the_play_area_stops_at_chrome_s_canvas() {
+    // A terminal bigger than the browser's canvas gets margins, not a wider
+    // world: the game should never show more than Chrome does.
+    let big = View::new(400, 50);
+    assert_eq!(
+        (big.play_cols, big.play_rows),
+        (game::FULL_COLS, game::FULL_ROWS)
+    );
+    assert_eq!(
+        big.world_w, 600.0,
+        "Chrome's canvas is 600 world pixels wide"
+    );
+    assert_eq!(big.scale, 1.0, "and runs at Chrome's own clock");
+    assert_eq!(big.origin(), (50, 6), "centred in what is left over");
+    assert_eq!(
+        big.sx(0.0),
+        50,
+        "the world starts at the play area, not the terminal"
+    );
+
+    // Smaller terminals still use everything they have.
+    let small = View::new(120, 30);
+    assert_eq!((small.play_cols, small.play_rows), (120, 30));
+    assert_eq!(small.origin(), (0, 0));
+}
+
+#[test]
 fn a_jump_covers_the_same_ground_at_any_width() {
     // The invariant that keeps the game playable on a small terminal: a jump
     // always carries the T-Rex over the same number of world pixels, so an

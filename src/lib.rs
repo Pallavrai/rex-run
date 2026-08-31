@@ -3,8 +3,10 @@
 //! The game logic is terminal-free and lives in [`game`], [`trex`],
 //! [`obstacle`] and [`horizon`]; [`render`] turns a 1-bit framebuffer into
 //! half-block characters. Sprites in [`sprites`] are generated from
-//! Chromium's sprite sheet by `tools/gen_sprites.py`.
+//! Chromium's sprite sheet by `tools/gen_sprites.py`; the HUD is drawn with
+//! the pixel font in [`font`].
 
+pub mod font;
 pub mod game;
 pub mod horizon;
 pub mod obstacle;

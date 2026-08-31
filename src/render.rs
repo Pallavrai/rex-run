@@ -11,6 +11,8 @@ use std::io::{self, Write};
 use crossterm::style::Color;
 use crossterm::{cursor, queue, style};
 
+use crate::font;
+
 /// Marks a cell whose painted contents are unknown, forcing a repaint.
 const DIRTY: u8 = 0xff;
 
@@ -100,6 +102,26 @@ impl Screen {
     fn set(&mut self, x: i32, y: i32, ink: bool) {
         if x >= 0 && y >= 0 && x < self.cols as i32 && y < self.height() {
             self.px[y as usize * self.cols as usize + x as usize] = ink;
+        }
+    }
+
+    /// Draw text into the framebuffer with the pixel font, `scale` pixels
+    /// per font pixel. Returns nothing: it clips like any other blit.
+    pub fn blit_text(&mut self, x: i32, y: i32, text: &str, scale: i32) {
+        for (i, c) in text.chars().enumerate() {
+            let left = x + i as i32 * font::ADVANCE * scale;
+            for (row, pixels) in font::glyph(c).iter().enumerate() {
+                for (col, pixel) in pixels.chars().enumerate() {
+                    if pixel != ' ' {
+                        for dy in 0..scale {
+                            for dx in 0..scale {
+                                let px = left + col as i32 * scale + dx;
+                                self.set(px, y + row as i32 * scale + dy, true);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

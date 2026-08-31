@@ -39,8 +39,14 @@ cargo run --release
 ```
 
 Needs a terminal at least 60x24, and one that can draw `▀` (any terminal from
-this century). 30 rows or more is more comfortable; at 38 rows you get
-Chrome's entire 150-pixel world.
+this century).
+
+**Make the window 300x38 and you get Chrome's canvas exactly** &mdash; same
+field of view, same proportions, same speed. The play area is capped there, so
+a bigger window gets margins rather than a wider world than the browser ever
+had; a smaller one shrinks to fit and shows less of the world, which makes the
+T-Rex look proportionally larger. The start screen tells you the size to aim
+for.
 
 ## Controls
 
@@ -83,6 +89,11 @@ survive and the dino keeps its eye; the result is committed as
 silhouette &mdash; scaling an already-tiny sprite is where the other clones
 turn to mush.
 
+**The HUD is pixels too.** Chrome's 10x13 digits are mush at half size, so
+the score and the game-over panel are drawn into the framebuffer with a 3x5
+font instead of printed as terminal text. They keep the game's proportions at
+any window size, and they invert with night mode like everything else.
+
 **One bit.** Chrome draws everything in one ink colour on one paper colour
 &mdash; the T-Rex's eye is a white pixel punched through its head, not a hole
 &mdash; so the framebuffer is a bitmap and night mode is those two colours
@@ -95,21 +106,27 @@ its ducking adjustment. The numbers are the browser's, and the game logic
 never touches the terminal, so it runs headless in tests &mdash; including a
 seeded 2400-frame run whose final score is asserted exactly.
 
-**The clock bends, not the world.** A 120-column terminal is 240 world pixels
-wide where Chrome has 600, so there is less room to see an obstacle coming.
-Shrinking the world would leave jumps too short to clear anything, so instead
-the simulation clock runs slower by the same ratio: identical geometry,
-identical jump arcs, identical scores per obstacle, just more seconds of
-warning. At 300 columns the clock is Chrome's exactly.
+**A fixed play area.** Two world pixels to a column and four to a row makes
+Chrome's 600x150 canvas exactly 300x38 cells, and the game never draws a
+larger world than that: on a bigger terminal the play area is centred and the
+rest is margin, so the game looks the same everywhere above that size instead
+of sprawling.
+
+**The clock bends, not the world.** Below 300 columns the play area shrinks,
+and a 120-column terminal is 240 world pixels wide where Chrome has 600 --
+less room to see an obstacle coming. Shrinking the world's *geometry* would
+leave jumps too short to clear anything, so instead the simulation clock runs
+slower by the same ratio: identical jump arcs, identical scores per obstacle,
+just more seconds of warning.
 
 ### Where it differs from Chrome
 
 | | Chrome | rex-run |
 |---|---|---|
-| world | 600x150 | terminal width x 150, sky cropped when short |
+| world | 600x150 | the same, on a 300x38 terminal; smaller windows see less of it, sky cropped first |
 | clock | 60 fps | 60 fps, slowed on terminals narrower than 600 world pixels |
 | jump apex | near the top of the canvas | capped to the visible sky below 38 rows |
-| score and game-over text | bitmap sprites | the terminal's own font &mdash; a 10x13 bitmap digit at half size is unreadable |
+| score and game-over text | 10x13 sprites from the sheet | a 3x5 pixel font, drawn in the framebuffer &mdash; Chrome's digits are unreadable at half size |
 | night mode | fades over the canvas | 400 ms colour cross-fade |
 | key release | `keyup` | real key-up events on terminals speaking the kitty keyboard protocol, otherwise an auto-repeat timeout |
 | sound | three effects | none |

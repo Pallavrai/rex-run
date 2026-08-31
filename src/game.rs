@@ -13,6 +13,7 @@
 //! scores per obstacle, just more seconds of warning. At 300 columns and up
 //! the clock is Chrome's exactly.
 
+use crate::font;
 use crate::horizon::Horizon;
 use crate::render::Screen;
 use crate::trex::{self, Status, Trex};
@@ -53,6 +54,13 @@ const DUCK_HOLD_MS: f64 = 600.0;
 /// Minimum usable terminal, in cells.
 pub const MIN_COLS: u16 = 60;
 pub const MIN_ROWS: u16 = 24;
+
+/// Chrome's 600x150 canvas, in cells: two world pixels per column, four per
+/// row. The play area never grows past this, so a big terminal gets the
+/// browser's exact field of view with margins around it rather than a wider
+/// world than Chrome ever had.
+pub const FULL_COLS: u16 = (REFERENCE_W / 2.0) as u16;
+pub const FULL_ROWS: u16 = (WORLD_H / 4.0) as u16 + 1;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum State {
@@ -136,36 +144,57 @@ impl Config {
     }
 }
 
-/// Maps Chrome's world onto the terminal.
+/// Maps Chrome's world onto a play area inside the terminal.
+///
+/// The play area is the terminal, capped at Chrome's own canvas and centred
+/// in whatever is left over. Below that cap it shrinks with the window --
+/// the alternative, a hard minimum, would lock out an 80x24 terminal
+/// entirely.
 #[derive(Clone, Copy)]
 pub struct View {
     pub cols: u16,
     pub rows: u16,
+    /// Play area in cells.
+    pub play_cols: u16,
+    pub play_rows: u16,
+    /// Cell column the play area starts at.
+    pub x_off: i32,
     /// World width in Chrome units: one cell is two of them.
     pub world_w: f64,
     /// World width relative to Chrome's 600px canvas, capped at 1. Scales
     /// the simulation clock and the T-Rex's distance from the left edge.
     pub scale: f64,
     /// Pixel offset applied to every world row, negative when the sky is
-    /// cropped because the terminal is short.
+    /// cropped because the play area is short.
     pub y_off: i32,
 }
 
 impl View {
     pub fn new(cols: u16, rows: u16) -> View {
-        let world_w = cols as f64 * 2.0;
+        let play_cols = cols.min(FULL_COLS);
+        let play_rows = rows.min(FULL_ROWS);
+        let world_w = play_cols as f64 * 2.0;
+        let bottom_row = (rows - play_rows) / 2 + play_rows;
         View {
             cols,
             rows,
+            play_cols,
+            play_rows,
+            x_off: ((cols - play_cols) / 2) as i32,
             world_w,
             scale: (world_w / REFERENCE_W).min(1.0),
-            y_off: rows as i32 * 2 - (VIEW_BOTTOM / 2.0) as i32,
+            y_off: bottom_row as i32 * 2 - (VIEW_BOTTOM / 2.0) as i32,
         }
+    }
+
+    /// Top-left cell of the play area.
+    pub fn origin(&self) -> (u16, u16) {
+        (self.x_off as u16, (self.rows - self.play_rows) / 2)
     }
 
     #[inline]
     pub fn sx(&self, x: f64) -> i32 {
-        (x * 0.5).round() as i32
+        (x * 0.5).round() as i32 + self.x_off
     }
 
     #[inline]
@@ -178,9 +207,10 @@ impl View {
         (trex::START_X_POS * self.scale).round()
     }
 
-    /// Highest world row still on screen.
+    /// Highest world row still inside the play area.
     pub fn sky_top(&self) -> f64 {
-        (-self.y_off).max(0) as f64 * 2.0
+        let top = self.origin().1 as i32 * 2;
+        (top - self.y_off).max(0) as f64 * 2.0
     }
 
     /// Highest world row a jump should reach, so the T-Rex stays in frame.
@@ -565,26 +595,58 @@ impl Game {
             self.view.sy(self.trex.y),
         );
 
+        // The HUD is drawn into the framebuffer with the pixel font rather
+        // than printed as terminal text: it scales with the game instead of
+        // the terminal's font, and inverts with night mode.
+        let (left, top) = self.view.origin();
+        let (left, top) = (left as i32, top as i32 * 2);
+        let width = self.view.play_cols as i32;
+        // Panels sit a third of the way down, clear of the ground and the
+        // T-Rex, where Chrome puts its game-over text.
+        let panel = top + self.view.play_rows as i32 * 2 / 3;
+
         if !self.flashing || self.flash_timer >= FLASH_DURATION {
             let score = if self.high_score > 0 {
                 format!("HI {:05}  {:05}", self.high_score, self.score())
             } else {
                 format!("{:05}", self.score())
             };
-            let col = self.view.cols as usize - score.len().min(self.view.cols as usize);
-            screen.text(col as u16, 0, &score);
+            let x = left + width - font::width(&score, 1) - 1;
+            screen.blit_text(x, top + 2, &score, 1);
         }
 
         match self.state {
             State::Waiting => {
-                screen.text(0, self.view.rows - 1, "space jump · down duck · q quit");
+                // Longest hint that fits; a 60-column terminal has room for
+                // very little.
+                let hint = ["SPACE JUMP · DOWN DUCK · Q QUIT", "SPACE JUMP · Q QUIT", "SPACE JUMP"]
+                    .into_iter()
+                    .find(|text| font::width(text, 1) <= width - 2)
+                    .unwrap_or("");
+                self.centered(screen, panel, hint, 1);
+
+                // The play area is as wide as the terminal until it reaches
+                // Chrome's canvas, so say what size shows the whole world.
+                if self.view.play_cols < FULL_COLS || self.view.play_rows < FULL_ROWS {
+                    let resize = format!("RESIZE TO {FULL_COLS}X{FULL_ROWS}");
+                    if font::width(&resize, 1) <= width - 2 {
+                        self.centered(screen, panel + font::HEIGHT + 4, &resize, 1);
+                    }
+                }
             }
             State::Crashed => {
-                let row = self.view.rows / 3;
-                screen.text_centered(row, "G A M E   O V E R");
-                screen.text_centered(row + 2, "space to restart · q to quit");
+                let banner = if font::width("GAME OVER", 2) + 4 <= width { 2 } else { 1 };
+                self.centered(screen, panel, "GAME OVER", banner);
+                self.centered(screen, panel + font::HEIGHT * banner + 4, "PRESS SPACE", 1);
             }
             State::Running => {}
         }
+    }
+
+    /// Centre pixel-font text on the play area.
+    fn centered(&self, screen: &mut Screen, y: i32, text: &str, scale: i32) {
+        let (left, _) = self.view.origin();
+        let x = left as i32 + (self.view.play_cols as i32 - font::width(text, scale)) / 2;
+        screen.blit_text(x, y, text, scale);
     }
 }
