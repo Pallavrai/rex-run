@@ -619,10 +619,14 @@ impl Game {
             State::Waiting => {
                 // Longest hint that fits; a 60-column terminal has room for
                 // very little.
-                let hint = ["SPACE JUMP · DOWN DUCK · Q QUIT", "SPACE JUMP · Q QUIT", "SPACE JUMP"]
-                    .into_iter()
-                    .find(|text| font::width(text, 1) <= width - 2)
-                    .unwrap_or("");
+                let hint = [
+                    "SPACE JUMP · DOWN DUCK · Q QUIT",
+                    "SPACE JUMP · Q QUIT",
+                    "SPACE JUMP",
+                ]
+                .into_iter()
+                .find(|text| font::width(text, 1) <= width - 2)
+                .unwrap_or("");
                 self.centered(screen, panel, hint, 1);
 
                 // The play area is as wide as the terminal until it reaches
@@ -635,7 +639,11 @@ impl Game {
                 }
             }
             State::Crashed => {
-                let banner = if font::width("GAME OVER", 2) + 4 <= width { 2 } else { 1 };
+                let banner = if font::width("GAME OVER", 2) + 4 <= width {
+                    2
+                } else {
+                    1
+                };
                 self.centered(screen, panel, "GAME OVER", banner);
                 self.centered(screen, panel + font::HEIGHT * banner + 4, "PRESS SPACE", 1);
             }

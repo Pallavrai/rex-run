@@ -17,6 +17,6 @@ which plays the game inside a pseudo-terminal and renders the cells it emits:
 
 ```bash
 cargo build --release
-python3 tools/screenshot.py --bot --action --cols 120 --rows 30 --scale 6 \
+python3 tools/screenshot.py --bot --action --cols 300 --rows 38 --scale 4 \
     -o assets/screenshot.png
 ```
