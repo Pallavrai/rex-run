@@ -44,7 +44,7 @@ jobs:
           Copy-Item target/${{ matrix.target }}/release/rex-run.exe, README.md, LICENSE, NOTICE $staging
           Compress-Archive -Path $staging -DestinationPath "$staging.zip"
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             rex-run-*.tar.gz
